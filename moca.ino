@@ -1,67 +1,99 @@
+#if defined(ESP32)
+#include <WiFi.h>
+#include <FirebaseESP32.h>
+#elif defined(ESP8266)
 #include <ESP8266WiFi.h>
-#include <ESP8266mDNS.h>
-#include <ArduinoOTA.h>
-#include <WebSocketsServer.h>
-#include <ESP8266WebServer.h>
-#include <Hash.h>
-const char* ssid = "NICO_ROBIN";
-const char* password = "D60007000d";
+#include <FirebaseESP8266.h>
+#endif
 
-//"2021-10-14 19:56:54,2021-10-14 19:56:55,2021-10-14 19:56:57,2021-10-14 19:56:59,2021-10-14 19:57:01,2021-10-14 19:57:04,2021-10-14 19:57:05,2021-10-14 19:57:06"
-WebSocketsServer webSocket = WebSocketsServer(81);
-ESP8266WebServer server(80);
-void handleRoot() 
+#include <addons/TokenHelper.h>
+#include <addons/RTDBHelper.h>
+#define DATABASE_URL "https://heart-8ad13-default-rtdb.firebaseio.com" 
+#define API_KEY "++" 
+#define WIFI_SSID "NICO" 
+#define WIFI_PASSWORD "D6" 
+String USER_EMAIL = "juanjosebrandlondono@pascualbravo.edu.co";
+String USER_PASSWORD = "++++";
+String ID = "N7C7C7OR0B1N";
+FirebaseData fbdo;
+FirebaseAuth auth;
+FirebaseConfig config;
+String path = String("/MOCA/"+ID+"/latidos");
+String pathLastUpdate = String("/MOCA/"+ID+"/timeUpdate");
+unsigned long sendDataPrevMillis = 0;
+unsigned long timemls,timemls2,times;
+
+int espera = 1000;
+
+int latidos = 0;
+
+unsigned long count = 0;
+
+int pulso = 0;
+int last = 0;
+int last2 = 0;
+
+void setup()
 {
-  Serial.print("Connected");
-  float _rand = random(60,90);
-  String message = "2021-10-14 19:56:54,";
-  message += _rand;
-   server.send(200, "text/plain",message);
-}
 
+  Serial.begin(9600);
 
-void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
-
-    switch(type) {
-        case WStype_DISCONNECTED:
-            Serial.printf("[%u] Disconnected!\n", num);
-            break;
-        case WStype_CONNECTED:
-            Serial.printf("[%u] conected!\n", num);
-            webSocket.sendTXT(num, "Connected");
-            break;
-        /**case WStype_TEXT:
-            Serial.printf("[%u] get Text: %s\n", num, payload);
-            webSocket.broadcastTXT("message here");
-            break;
-        case WStype_BIN:
-            Serial.printf("[%u] get binary length: %u\n", num, length);
-            hexdump(payload, length);
-            break;**/
-    }
-
-}
-
-void setup() {
-  Serial.begin(115200);
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, password);
-  if(WiFi.waitForConnectResult() != WL_CONNECTED) {
-    Serial.println("WiFi Connect Failed! Rebooting...");
-    delay(1000);
-    ESP.restart();
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  //Serial.print("Connecting to Wi-Fi");
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    //Serial.print(".");
+    delay(300);
   }
-  server.on("/", handleRoot);
-  server.begin();
-  Serial.print("Open http://");
-  Serial.print(WiFi.localIP());
-  Serial.println("/ in your browser to see it working");
+  //Serial.println(WiFi.localIP());
+  /**Serial.println();
+  Serial.print("Connected with IP: ");
   
-  webSocket.begin();
-  webSocket.onEvent(webSocketEvent);
+  Serial.println();
+  Serial.printf("Firebase Client v%s\n\n", FIREBASE_CLIENT_VERSION);*/
+  config.api_key = API_KEY;
+  auth.user.email = USER_EMAIL;
+  auth.user.password = USER_PASSWORD;
+  config.database_url = DATABASE_URL;
+  config.token_status_callback = tokenStatusCallback; //see addons/TokenHelper.h
+  Firebase.begin(&config, &auth);
+  //Firebase.reconnectWiFi(true);
+  Firebase.setDoubleDigits(5);
 }
 
-void loop(){
-  server.handleClient();
-  webSocket.loop();
+void loop()
+{
+
+    pulso = analogRead(0);
+  if(pulso > 520 && pulso < last){
+    Serial.println(last);
+   }
+   last = pulso;
+
+ /** count = 0;
+  while(count < 20){
+    Serial.println(pulso);
+   if( last < pulso && pulso >= 551){
+    
+     timemls = millis();
+     times = timemls - timemls2;
+     if(times > 400) {
+      latidos = 120000/(times+100);  
+     }
+     count++;  
+     timemls2 = timemls;
+   }
+   last = pulso;
+  }
+  
+      if (Firebase.ready())
+    {
+      Firebase.setTimestamp(fbdo, pathLastUpdate);
+      long lastDate = fbdo.to<long>();
+      //if(latidos > 10 && latidos < 150)
+      Firebase.setInt(fbdo, String(path+"/"+lastDate), latidos+8);
+      //Serial.println(fbdo.to<int>());
+      latidos = 0;
+      delay(espera);
+    } */
 }
